@@ -1,0 +1,48 @@
+[
+  {
+    "structure": {
+      "@module": "pymatgen.core.structure",
+      "@class": "Structure",
+      "charge": null,
+      "lattice": {
+        "matrix": [
+            [5.43, 0.0, 0.0],
+            [0.0, 5.43, 0.0],
+            [0.0, 0.0, 5.43]
+        ],
+        "a": 5.43,
+        "b": 5.43,
+        "c": 5.43,
+        "alpha": 90.0,
+        "beta": 90.0,
+        "gamma": 90.0,
+        "volume": 160.103
+      },
+      "sites": [
+        {"species": [{"element": "Si", "occu": 1.0}], "abc": [0.0, 0.0, 0.0], "xyz": [0.0, 0.0, 0.0], "label": "Si"},
+        {"species": [{"element": "Si", "occu": 1.0}], "abc": [0.25, 0.25, 0.25], "xyz": [1.3575, 1.3575, 1.3575], "label": "Si"}
+      ]
+    },
+    "formation_energy_per_atom": -0.5,
+    "band_gap": 1.1,
+    "density": 2.33
+  },
+  {
+    "structure": {
+        "@module": "pymatgen.core.structure",
+        "@class": "Structure",
+        "charge": null,
+        "lattice": {
+            "matrix": [[4.2, 0, 0], [0, 4.2, 0], [0, 0, 4.2]],
+            "a": 4.2, "b": 4.2, "c": 4.2, "alpha": 90, "beta": 90, "gamma": 90, "volume": 74.088
+        },
+        "sites": [
+            {"species": [{"element": "Mg", "occu": 1}], "abc": [0, 0, 0], "xyz": [0, 0, 0]},
+            {"species": [{"element": "O", "occu": 1}], "abc": [0.5, 0.5, 0.5], "xyz": [2.1, 2.1, 2.1]}
+        ]
+    },
+    "formation_energy_per_atom": -3.0,
+    "band_gap": 7.8,
+    "density": 3.58
+  }
+]

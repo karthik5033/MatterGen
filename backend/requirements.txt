@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+# Add other dependencies as needed
+torch
+pymatgen
+numpy
