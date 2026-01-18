@@ -29,8 +29,8 @@ export default function CrystalViewer({ cifData, materialId, className }: Crysta
       const size = 80;
 
       // Draw backdrop (transparent/neutral)
-      ctx.fillStyle = '#f8fafc'; // Neutral slate-50
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // ctx.fillStyle = '#f8fafc'; // Neutral slate-50
+      // ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Grid Pattern
       ctx.strokeStyle = '#e2e8f0';
@@ -83,61 +83,19 @@ export default function CrystalViewer({ cifData, materialId, className }: Crysta
   }, []);
 
   return (
-    <div className={`flex flex-col h-full bg-white border border-gray-200 rounded-lg overflow-hidden ${className}`}>
-        {/* Scientific Header */}
-        <div className="flex justify-between items-center px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <h4 className="text-xs font-bold uppercase tracking-widest text-gray-700">Crystal Structure</h4>
-            <div className="flex items-center gap-2">
-                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                 <span className="text-[10px] font-mono text-gray-400">LIVE RENDER</span>
-            </div>
-        </div>
-
-        {/* Main Viewport */}
-        <div className="relative flex-1 bg-gray-50/50 min-h-[200px]">
-            <canvas 
-                ref={canvasRef} 
-                width={600} 
-                height={600} 
-                className="absolute inset-0 w-full h-full object-contain mix-blend-multiply opacity-90"
-            />
-            
-            {/* Overlay Info */}
-            <div className="absolute bottom-4 left-4 pointer-events-none">
-                <div className="bg-white/90 backdrop-blur border border-gray-200 px-3 py-2 rounded shadow-sm">
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Unit Cell</div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-mono text-gray-600">
-                        <span>a: 3.42Å</span>
-                        <span>b: 3.42Å</span>
-                        <span>c: 5.12Å</span>
-                    </div>
+    <div className={`relative w-full h-full bg-gray-50/20 overflow-hidden ${className}`}>
+        <canvas 
+            ref={canvasRef} 
+            width={600} 
+            height={600} 
+            className="w-full h-full object-contain mix-blend-multiply opacity-90"
+        />
+        
+        {/* Subtle Interactive Hint which doesn't overlap annoyingly */}
+        <div className="absolute bottom-2 right-2 pointer-events-none opacity-40">
+                <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest bg-white/50 px-2 py-1 rounded">
+                Structure Preview
                 </div>
-            </div>
-            
-            {/* Interactive Hints */}
-            <div className="absolute top-4 right-4 pointer-events-none opacity-50">
-                 <div className="text-[9px] font-bold text-gray-400 border border-gray-300 rounded px-1.5 py-0.5 uppercase">
-                    Drag to Rotate
-                 </div>
-            </div>
-        </div>
-
-        {/* Footer / Legend */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 bg-white">
-            <div className="flex items-center gap-4 text-[10px] text-gray-500 font-medium">
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Li
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-red-500"></span> O
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-gray-400"></span> Fe
-                </div>
-            </div>
-            <div className="text-[9px] font-mono text-gray-300">
-                Mol* Ready
-            </div>
         </div>
 
       {/* Hidden Data for Integration */}

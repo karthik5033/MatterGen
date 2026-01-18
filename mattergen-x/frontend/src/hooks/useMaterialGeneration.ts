@@ -18,7 +18,7 @@ export function useMaterialGeneration() {
     setError(null);
     
     try {
-      const candidates = await ApiService.generateMaterials(prompt, weights, 3);
+      const candidates = await ApiService.generateMaterials(prompt, weights, 4);
       setCandidates(candidates);
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred during generation.");
