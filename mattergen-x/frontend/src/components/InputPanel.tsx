@@ -204,7 +204,7 @@ export default function InputPanel({ onGenerate, isLoading, error }: InputPanelP
 
         {/* Sliders Section */}
         <div className="space-y-8">
-             <WeightSliders weights={weights} onChange={setWeights} />
+             <WeightSliders weights={weights} onChange={(newWeights) => setWeights(newWeights as typeof weights)} />
              
              <button
                type="submit"
