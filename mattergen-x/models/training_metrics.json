@@ -1,0 +1,33 @@
+{
+  "best_metrics": {
+    "Energy Above Hull": {
+      "MAE": 0.0206363033503294,
+      "R2": 0.137745201587677
+    },
+    "Band Gap": {
+      "MAE": 0.08674044907093048,
+      "R2": -0.38140785694122314
+    },
+    "Bulk Modulus": {
+      "MAE": 6.629295349121094,
+      "R2": 0.9499815106391907
+    }
+  },
+  "config": {
+    "train_path": "D:/coding_files/Projects/matterGen/material dataset/train.parquet",
+    "val_path": "D:/coding_files/Projects/matterGen/material dataset/val.parquet",
+    "output_dir": "D:\\coding_files\\Projects\\matterGen\\mattergen-x\\training\\scripts\\../../models",
+    "max_train_samples": 50000,
+    "max_val_samples": 10000,
+    "hidden_dim": 128,
+    "n_layers": 5,
+    "dropout": 0.1,
+    "epochs": 100,
+    "batch_size": 64,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "grad_clip": 1.0,
+    "patience": 15
+  },
+  "timestamp": "2026-01-19T19:03:25.825127"
+}

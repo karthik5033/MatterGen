@@ -24,7 +24,9 @@ class MaterialService:
         self.predictor = None
         if os.path.exists(model_path):
             try:
-                self.predictor = CGCNNPredictor(model_path=model_path, device="cpu") 
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                print(f"Loading Model on {device.upper()}...")
+                self.predictor = CGCNNPredictor(model_path=model_path, device=device) 
             except Exception as e:
                 print(f"Warning: Failed to load CGCNN model: {e}")
         
@@ -190,6 +192,7 @@ class MaterialService:
                 target_gap = 0.0
                 if "solar" in query: target_gap = 1.6
                 elif "insulator" in query: target_gap = 4.0
+                elif "transparent" in query: target_gap = 3.5
                 # If no target, prefer higher gap if weight is high? Or just gap size.
                 # Let's assume higher weight = specific target search or just higher gap for 'safety'
                 # Simplest: Punish deviation from ideal if specified, else reward gap
@@ -229,10 +232,20 @@ class MaterialService:
 
         # Convert
         results = []
-        for m in final_candidates:
+        for i, m in enumerate(final_candidates):
             props = m.get("properties", {})
             props["stability"] = 0.95 if props.get("formation_energy", 0) < 0 else 0.4
             
+            # Calculate Base Confidence
+            confidence = max(0.85, 0.98 - (i * 0.04))
+            
+            # Constraint Penalties
+            bg = props.get("band_gap", 0)
+            if "transparent" in query and bg < 2.0:
+                 confidence = 0.45 
+            elif "solar" in query and (bg < 1.0 or bg > 2.5):
+                 confidence -= 0.2
+
             # Inject synth props to frontend so user sees why it was picked
             import hashlib
             h = int(hashlib.sha256(m['formula'].encode()).hexdigest(), 16)
@@ -257,7 +270,8 @@ class MaterialService:
                 formula=m["formula"],
                 predicted_properties=props,
                 crystal_structure_cif=f"# Real Structure for {m['formula']}\n# ID: {m['id']}", 
-                structure_embedding=m.get("embedding", [])
+                structure_embedding=m.get("embedding", []),
+                score=confidence
             ))
             
         return results
