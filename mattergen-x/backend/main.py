@@ -1,6 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.endpoints import generation
+import sys
+import os
+import time
+
+# Add parent directory to path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.api.endpoints import generation, analysis
 
 app = FastAPI(
     title="MATTERGEN X - API",
@@ -11,22 +18,30 @@ app = FastAPI(
 # Enable CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-from fastapi.staticfiles import StaticFiles
-import os
+# Logging Middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    print(f"DEBUG: Request {request.method} {request.url.path}")
+    response = await call_next(request)
+    process_time = (time.time() - start_time) * 1000
+    print(f"DEBUG: Response {response.status_code} (took {process_time:.2f}ms)")
+    return response
 
+from fastapi.staticfiles import StaticFiles
 # Mount static files
-# Ensure directory exists
 os.makedirs("app/static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Include the generation router
 app.include_router(generation.router, prefix="/api", tags=["Generation"])
+app.include_router(analysis.router, prefix="/api", tags=["Analysis"])
 
 @app.get("/")
 async def root():
@@ -38,4 +53,5 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Defaulting to 8002 to match frontend expectations
+    uvicorn.run("main:app", host="0.0.0.0", port=8002, reload=True)
