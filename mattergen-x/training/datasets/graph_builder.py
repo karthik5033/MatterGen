@@ -71,14 +71,19 @@ class CrystalGraphBuilder:
         features = []
         for site in structure:
             el = site.specie
-            # Safe handling for electronegativity (noble gases often None)
-            X = el.X if el.X else 0.0 
+            # Safe handling for electronegativity (noble gases often None/NaN)
+            # Pymatgen might return NaN for noble gases with a warning
+            raw_X = el.X
+            if raw_X is None or np.isnan(raw_X):
+                X = 0.0
+            else:
+                X = float(raw_X)
             
             features.append([
                 float(el.Z),
                 float(el.group),
                 float(el.row),
-                float(X)
+                X
             ])
         return torch.tensor(features, dtype=torch.float32)
 
