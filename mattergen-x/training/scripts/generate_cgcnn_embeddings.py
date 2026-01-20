@@ -1,34 +1,48 @@
 import os
+import sys
 import argparse
 import logging
+import warnings
 import json
 import numpy as np
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
+
+# Suppress warnings
+warnings.filterwarnings("ignore")
+
+# Add project root to sys.path for module imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, "../.."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
 from training.datasets.loader import MaterialDataLoader
 from training.datasets.graph_builder import CrystalGraphBuilder
 from training.datasets.graph_dataset import CrystalGraphDataset, collate_batch
 from training.models.cgcnn import CGCNN
-from training.scripts.train_robust import set_seed
 
 # Configure Logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 def generate_embeddings(args):
-    set_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.info(f"Using Device: {device}")
     
     # 1. Load Data
-    logger.info("Loading Data...")
+    logger.info(f"Loading Data from {args.data_path}...")
     loader = MaterialDataLoader(args.data_path)
     raw_data = loader.load()
     
-    # 2. Build Dataset (No splitting here, we might want embeddings for EVERYTHING or let user filter)
-    # For this script, we'll extract for the ENTIRE dataset to enable a full material map.
+    if not raw_data:
+        logger.error("No data loaded!")
+        return
+
+    # 2. Build Dataset
+    logger.info("Building Graph Dataset...")
     builder = CrystalGraphBuilder(radius=8.0, dStep=0.2)
-    # cache_graphs=False to save memory if dataset is huge, or True if small. 
-    # With mock data, True is fine.
     dataset = CrystalGraphDataset(raw_data, builder, cache_graphs=True)
     
     graph_loader = DataLoader(dataset, batch_size=args.batch_size, collate_fn=collate_batch, shuffle=False)
@@ -41,11 +55,11 @@ def generate_embeddings(args):
         logger.error(f"Model not found at {model_path}")
         return
 
+    logger.info(f"Loading model from {model_path}")
     checkpoint = torch.load(model_path, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
-    logger.info("Model loaded.")
-
+    
     # 4. Extract Embeddings
     all_embeddings = []
     metadata = []
@@ -57,39 +71,25 @@ def generate_embeddings(args):
             nbr_fea = batch['nbr_fea'].to(device)
             nbr_idx = batch['nbr_idx'].to(device)
             batch_map = batch['batch'].to(device)
-            
-            # IDs and Formulas
             batch_ids = batch['ids']
-            # We can't access 'formula' directly from batch dict if we didn't put it in collate?
-            # collate returns 'ids', but not formula explicitly in the return dict unless we added it?
-            # Let's check graph_dataset.py.
-            # ... collate_batch returns "ids" list. Dataset __getitem__ returns "formula".
-            # Oops, collate_batch logic in graph_dataset.py calculates 'ids' but doesn't explicitly pass through 'formula'.
-            # However, we can recover formula from raw_data using the ID if needed, OR we can rely on ID being enough.
-            # Actually, let's just assume we need IDs for now.
             
             # Extract
-            # n_graphs is batch_ids length
             n_graphs = len(batch_ids)
-            
             crys_emb = model.get_crystal_embedding(atom_fea, nbr_fea, nbr_idx, batch_map, n_graphs)
             all_embeddings.append(crys_emb.cpu().numpy())
             
-            for i, mid in enumerate(batch_ids):
-                # Find the original entry to get formula/targets for metadata
-                # This is O(N) lookup/scan if not careful. 
-                # Ideally dataset[i] corresponds to raw_data[i] if shuffle=False.
-                # Since shuffle=False in DataLoader, we can just use the index tracker?
-                # No, batches. 
-                # Let's just store the ID.
+            for mid in batch_ids:
                 metadata.append({"id": mid})
 
     # Concatenate
+    if len(all_embeddings) == 0:
+        logger.error("No embeddings generated.")
+        return
+
     all_embeddings = np.concatenate(all_embeddings, axis=0)
     
-    # Enhance Metadata with formulas/targets (Post-process)
-    # Since we iterated sequentially with shuffle=False, metadata indices align with dataset indices
-    # We can just iterate dataset again or use raw_data if 1:1
+    # Enhance Metadata
+    logger.info("Attaching metadata...")
     for i, meta in enumerate(metadata):
         entry = dataset.data_list[i]
         meta["formula"] = entry.get("formula")
@@ -104,20 +104,31 @@ def generate_embeddings(args):
     # 5. Save
     os.makedirs(args.output_dir, exist_ok=True)
     
-    np.save(os.path.join(args.output_dir, "cgcnn_embeddings.npy"), all_embeddings)
+    # Save as JSON (Frontend friendly)
+    output_json_path = os.path.join(args.output_dir, "material_embeddings.json")
     
-    with open(os.path.join(args.output_dir, "cgcnn_metadata.json"), "w") as f:
-        json.dump(metadata, f, indent=2)
+    # We want a list of objects: {id, formula, embedding: [x, y, ...], targets: {...}}
+    final_output = []
+    for i, meta in enumerate(metadata):
+        final_output.append({
+            "id": meta["id"],
+            "formula": meta["formula"],
+            "embedding": all_embeddings[i].tolist(), # Convert numpy array to list for JSON
+            "properties": meta["targets"]
+        })
         
-    logger.info(f"Saved artifacts to {args.output_dir}")
+    with open(output_json_path, "w") as f:
+        json.dump(final_output, f, indent=None) # Compact JSON to save space
+        
+    logger.info(f"Saved material map to {output_json_path}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate CGCNN Embeddings")
-    parser.add_argument("--data_path", type=str, default="../../data/mock_materials.json")
+    parser.add_argument("--data_path", type=str, default="../../data/datasets/mp20_clean.json")
     parser.add_argument("--model_dir", type=str, default="../../models")
-    parser.add_argument("--output_dir", type=str, default="../../models/embeddings")
+    parser.add_argument("--output_dir", type=str, default="../../data") # Save directly to data so frontend/backend can reach it
     parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--seed", type=int, default=42)
     
     args = parser.parse_args()
     
