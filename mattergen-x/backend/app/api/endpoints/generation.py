@@ -1,6 +1,7 @@
+
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict
-from app.schemas.generation import GenerateRequest, GenerateResponse, ExplainRequest, ExplainResponse
+from app.schemas.generation import GenerateRequest, GenerateResponse, ExplainRequest, ExplainResponse, ChatRequest, ChatResponse
 from app.services.material_service import material_service
 
 router = APIRouter()
@@ -70,37 +71,35 @@ async def explain_prediction(request: ExplainRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Explanation failed: {str(e)}")
 
+@router.post("/chat/refine", response_model=ChatResponse)
+async def refine_specification(request: ChatRequest):
+    """
+    Refine a raw material specification using Aether Assistant.
+    Translates chat into ML-ready prompts and weights.
+    """
+    from app.services.gemini_service import gemini_service
+    result = await gemini_service.chat_with_assistant(
+        message=request.message,
+        context=request.context
+    )
+    return ChatResponse(**result)
+
 @router.get("/map")
 async def get_material_map():
     """
     Get 2D material map data for visualization.
-    Serves the pre-computed 'material_map.json' or generates a mock one.
+    Uses cached MapService to return points efficiently.
     """
-    import os
-    import json
-    
-    # Path to pre-computed map
-    # Assuming models/embeddings/material_map.json relative to project root
-    # We need to find project root relative to this file
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    map_path = os.path.join(base_dir, "models", "embeddings", "material_map.json")
-    
-    if os.path.exists(map_path):
-        with open(map_path, 'r') as f:
-            data = json.load(f)
-        return data
-    else:
-        # Mock Data if file missing
-        import random
-        points = []
-        formulas = ["LiFePO4", "SrTiO3", "GaN", "SiC", "BaTiO3", "MoS2", "CsPbI3", "Fe2O3"]
-        for i in range(50):
-            points.append({
-                "id": f"mock-{i}",
-                "formula": random.choice(formulas),
-                "x": random.uniform(-10, 10),
-                "y": random.uniform(-10, 10),
-                "neighbors": [],
-                "targets": {"band_gap": random.uniform(0, 4)}
-            })
-        return {"points": points}
+    from app.services.map_service import map_service
+    points = await map_service.get_map_points()
+    return {"points": points}
+
+@router.get("/stats/elements")
+async def get_element_statistics():
+    """
+    Get aggregated elemental statistics (frequency, stability) from the dataset.
+    Used for the Periodic Table Heatmap.
+    """
+    from app.services.map_service import map_service
+    stats = await map_service.get_elemental_stats()
+    return stats
