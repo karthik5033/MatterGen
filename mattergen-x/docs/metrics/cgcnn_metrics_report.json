@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-01-19T10:47:53.566884",
+  "model_checkpoint": "D:\\coding_files\\Projects\\matterGen\\mattergen-x\\training\\scripts\\../../models\\cgcnn_best.pt",
+  "test_samples": 10000,
+  "device": "cpu",
+  "regression_metrics": {
+    "Formation Energy": {
+      "MAE": 0.7555617094039917,
+      "RMSE": 0.8845308173306096,
+      "R2": 0.09609568119049072,
+      "MAPE": 39.51689147949219,
+      "Max_Error": 2.883052110671997,
+      "Median_AE": 0.7062276601791382,
+      "N_Samples": 10000,
+      "unit": "eV/atom"
+    },
+    "Band Gap": {
+      "MAE": 1.9527453184127808,
+      "RMSE": 2.3119783586393385,
+      "R2": -2.029564619064331,
+      "MAPE": 66.7623519897461,
+      "Max_Error": 6.341678619384766,
+      "Median_AE": 1.8354588747024536,
+      "N_Samples": 10000,
+      "unit": "eV"
+    },
+    "Density": {
+      "MAE": 0.5287401080131531,
+      "RMSE": 1.04143831929125,
+      "R2": 0.8250116109848022,
+      "MAPE": 7.110307216644287,
+      "Max_Error": 13.578195571899414,
+      "Median_AE": 0.22855496406555176,
+      "N_Samples": 10000,
+      "unit": "g/cm\u00b3"
+    }
+  },
+  "classification_metrics": {
+    "confusion_matrix": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        468,
+        238,
+        75,
+        62
+      ],
+      [
+        756,
+        625,
+        466,
+        179
+      ],
+      [
+        370,
+        2891,
+        2099,
+        1771
+      ]
+    ],
+    "class_names": [
+      "Metal",
+      "Narrow Gap Semi",
+      "Wide Gap Semi",
+      "Insulator"
+    ],
+    "accuracy": 0.2475,
+    "per_class_precision": {
+      "Metal": 0.0,
+      "Narrow Gap Semi": 0.0633990410229089,
+      "Wide Gap Semi": 0.1765151515151515,
+      "Insulator": 0.8802186878727635
+    },
+    "per_class_recall": {
+      "Metal": 0.0,
+      "Narrow Gap Semi": 0.2823250296559905,
+      "Wide Gap Semi": 0.23000987166831194,
+      "Insulator": 0.24835226475950078
+    },
+    "per_class_f1": {
+      "Metal": 0.0,
+      "Narrow Gap Semi": 0.1035457907330868,
+      "Wide Gap Semi": 0.1997428204029147,
+      "Insulator": 0.3874001968719239
+    },
+    "macro_precision": 0.280033220102706,
+    "macro_recall": 0.1901717915209508,
+    "macro_f1": 0.17267220200198136
+  }
+}
