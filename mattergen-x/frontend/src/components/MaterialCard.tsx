@@ -1,11 +1,14 @@
 import { MaterialCandidate } from "@/types/api";
 import CrystalViewer from "./CrystalViewer";
+import { useRouter } from "next/navigation";
 
 interface MaterialCardProps {
   candidate: MaterialCandidate;
 }
 
 export default function MaterialCard({ candidate }: MaterialCardProps) {
+  const router = useRouter();
+
   // Safe accessor helper
   const getProp = (key: string): string => {
     const val = candidate.predicted_properties[key];
@@ -13,11 +16,20 @@ export default function MaterialCard({ candidate }: MaterialCardProps) {
     return val?.toString() || 'N/A';
   };
 
-  // Heuristic confidence
-  const confidence = 0.85 + Math.random() * 0.14; 
+  // Confidence Score
+  const confidence = candidate.score ?? (0.85 + Math.random() * 0.14); 
+
+  const handleViewDetails = () => {
+    // Save data for the detail page since we don't have a DB yet
+    sessionStorage.setItem(`material_${candidate.id}`, JSON.stringify(candidate));
+    router.push(`/material/${candidate.id}`);
+  };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-500/30 transition-all duration-300 group cursor-pointer flex flex-col h-full ring-1 ring-gray-950/5">
+    <div 
+      onClick={handleViewDetails}
+      className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-500/30 transition-all duration-300 group cursor-pointer flex flex-col h-full ring-1 ring-gray-950/5"
+    >
       
       {/* Visual Preview (Top) */}
       <div className="relative h-52 bg-gray-50/50 border-b border-gray-100 group-hover:bg-gray-50 transition-colors">
@@ -62,28 +74,36 @@ export default function MaterialCard({ candidate }: MaterialCardProps) {
                  </div>
               </div>
               <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100/50">
-                 <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Energy</div>
+                 <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Hull Energy</div>
                  <div className="text-sm font-bold text-gray-900 font-mono">
-                   {getProp('formation_energy')} <span className="text-gray-400 font-sans text-xs">eV/at</span>
+                   {getProp('energy_above_hull')} <span className="text-gray-400 font-sans text-xs">eV/at</span>
                  </div>
               </div>
               <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100/50">
-                 <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Density</div>
+                 <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Bulk Modulus</div>
                  <div className="text-sm font-bold text-gray-900 font-mono">
-                   {getProp('density')} <span className="text-gray-400 font-sans text-xs">g/cm³</span>
+                   {getProp('bulk_modulus')} <span className="text-gray-400 font-sans text-xs">GPa</span>
                  </div>
               </div>
-              <div className="p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100/50">
-                 <div className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-wider mb-1">Stability</div>
-                 <div className="text-sm font-bold text-emerald-700">High</div>
+              <div className={`p-2.5 rounded-lg border ${Number(candidate.predicted_properties.energy_above_hull) < 0.05 ? 'bg-emerald-50/50 border-emerald-100/50 text-emerald-700' : 'bg-amber-50/50 border-amber-100/50 text-amber-700'}`}>
+                 <div className="text-[9px] font-bold opacity-70 uppercase tracking-wider mb-1">Stability</div>
+                 <div className="text-sm font-bold">
+                    {Number(candidate.predicted_properties.energy_above_hull) < 0.05 ? 'Stable' : 'Metastable'}
+                 </div>
               </div>
           </div>
 
           <div className="mt-auto pt-4 border-t border-gray-100 flex gap-2">
-             <button className="flex-1 py-2 text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors">
+             <button 
+                 onClick={(e) => { e.stopPropagation(); handleViewDetails(); }}
+                 className="flex-1 py-2 text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+             >
                 Structure
              </button>
-             <button className="flex-1 py-2 text-xs font-semibold text-white bg-gray-900 hover:bg-gray-800 rounded-lg shadow-sm transition-all hover:shadow-md">
+             <button 
+                onClick={(e) => { e.stopPropagation(); }}
+                className="flex-1 py-2 text-xs font-semibold text-white bg-gray-900 hover:bg-gray-800 rounded-lg shadow-sm transition-all hover:shadow-md"
+             >
                 Export CIF
              </button>
           </div>
