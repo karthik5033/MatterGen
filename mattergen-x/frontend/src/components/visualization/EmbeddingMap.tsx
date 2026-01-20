@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ApiService } from '@/lib/api';
 
 interface MapPoint {
   id: string;
@@ -31,8 +32,7 @@ export function EmbeddingMap({ onSelect, height = 500 }: EmbeddingMapProps) {
   useEffect(() => {
     async function fetchMap() {
       try {
-        const res = await fetch('http://localhost:8000/api/map');
-        const data = await res.json();
+        const data = await ApiService.getMaterialMap();
         setPoints(data.points || []);
       } catch (e) {
         console.error("Failed to load map", e);
@@ -127,8 +127,7 @@ export function EmbeddingMap({ onSelect, height = 500 }: EmbeddingMapProps) {
         <text x={25} y={(containerHeight + topPadding)/2} textAnchor="middle" fontSize="10" fill="#64748b" fontFamily="sans-serif" fontWeight="500" transform={`rotate(-90, 25, ${(containerHeight + topPadding)/2})`}>Principal Component 2</text>
 
 
-        <AnimatePresence>
-          {points.map((p) => {
+        {points.map((p) => {
             const cx = toSvgX(p.x);
             const cy = toSvgY(p.y);
             const isHovered = hovered?.id === p.id;
@@ -142,18 +141,15 @@ export function EmbeddingMap({ onSelect, height = 500 }: EmbeddingMapProps) {
             else color = '#f59e0b'; // Amber (Insulator)
 
             return (
-              <motion.circle
+              <circle
                 key={p.id}
                 cx={cx}
                 cy={cy}
-                r={isHovered ? 8 : (isSelected ? 6 : 4)}
+                r={isHovered ? 6 : (isSelected ? 4 : 1.8)}
                 fill={isSelected ? '#1e293b' : color} 
-                stroke={isSelected ? '#fff' : 'white'}
-                strokeWidth={isHovered ? 2 : 1}
-                opacity={isHovered || isSelected ? 1 : 0.8}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: isHovered || isSelected ? 1 : 0.8 }}
-                transition={{ duration: 0.4, delay: Math.random() * 0.3 }}
+                stroke={isSelected ? '#fff' : 'transparent'}
+                strokeWidth={isSelected ? 2 : 0}
+                opacity={isHovered || isSelected ? 1 : 0.6}
                 onMouseEnter={() => setHovered(p)}
                 onMouseLeave={() => setHovered(null)}
                 onClick={() => {
@@ -161,29 +157,36 @@ export function EmbeddingMap({ onSelect, height = 500 }: EmbeddingMapProps) {
                   onSelect?.(p.id);
                 }}
                 className="transition-all duration-200"
-                style={{ cursor: 'pointer', filter: isHovered ? 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))' : 'none' }}
+                style={{ cursor: 'pointer' }}
               />
             );
           })}
-        </AnimatePresence>
+        
       </svg>
 
-      {/* Tooltip */}
+      {/* Stats & Tooltip */}
+      <div className="absolute bottom-4 left-6 pointer-events-none z-10">
+          <div className="text-[10px] font-mono text-gray-400 bg-white/50 backdrop-blur px-2 py-1 rounded border border-gray-100">
+             POINTS: <span className="text-gray-900 font-bold">{points.length}</span>
+             {points.length > 100 && <span className="ml-2 text-emerald-600 font-bold">● LIVE DATA</span>}
+          </div>
+      </div>
+
       <AnimatePresence>
         {hovered && (
           <motion.div
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="absolute z-20 pointer-events-none bg-white border border-gray-200 px-3 py-2 rounded shadow-lg flex flex-col gap-0.5 min-w-[120px]"
+            className="absolute z-20 pointer-events-none bg-white/95 backdrop-blur border border-gray-200 px-3 py-2 rounded shadow-xl flex flex-col gap-0.5 min-w-[140px]"
             style={{
-              left: toSvgX(hovered.x) + 15, 
-              top: toSvgY(hovered.y) - 40 
+              left: Math.min(toSvgX(hovered.x) + 15, width - 160), // Prevent overflow right
+              top: Math.min(toSvgY(hovered.y) - 40, containerHeight - 80) // Prevent overflow bottom
             }}
           >
             <div className="text-gray-900 font-bold text-xs">{hovered.formula}</div>
             <div className="text-[10px] text-gray-500 font-mono border-t border-gray-100 pt-1 mt-1">
-               Band Gap: {hovered.targets?.band_gap?.toFixed(2)} eV
+               Band Gap: {hovered.targets?.band_gap?.toFixed(3)} eV
             </div>
           </motion.div>
         )}
