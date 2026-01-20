@@ -338,6 +338,52 @@ class ImprovedCGCNN(nn.Module):
         # Predict
         return self.output(crystal_fea)
 
+    def get_crystal_embedding(self, atom_fea, nbr_fea, nbr_idx, batch_mapping):
+        """
+        Extract crystal-level feature vector.
+        """
+        # Embed nodes
+        x = self.embedding(atom_fea)
+        
+        # Embed edges
+        edge_feat = self.edge_embedding(nbr_fea)
+        
+        # Message passing
+        for conv, ln in zip(self.convs, self.layer_norms):
+            # Gather neighbor features
+            src_idx = nbr_idx[:, 0]
+            dst_idx = nbr_idx[:, 1]
+            
+            # Message: concat source node with edge feature
+            messages = torch.cat([x[src_idx], edge_feat], dim=1)
+            messages = conv(messages)
+            
+            # Aggregate messages to destination nodes
+            aggr = torch.zeros_like(x)
+            aggr.index_add_(0, dst_idx, messages)
+            
+            # Count edges per node for mean aggregation
+            edge_count = torch.zeros(x.size(0), device=x.device)
+            edge_count.index_add_(0, dst_idx, torch.ones(dst_idx.size(0), device=x.device))
+            edge_count = edge_count.clamp(min=1.0)
+            aggr = aggr / edge_count.unsqueeze(1)
+            
+            # Residual + LayerNorm
+            x = ln(x + self.dropout(aggr))
+        
+        # Global pooling
+        n_graphs = batch_mapping.max().item() + 1
+        crystal_fea = torch.zeros(n_graphs, self.hidden_dim, device=x.device)
+        crystal_fea.index_add_(0, batch_mapping, x)
+        
+        # Mean pool
+        counts = torch.zeros(n_graphs, device=x.device)
+        counts.index_add_(0, batch_mapping, torch.ones(x.size(0), device=x.device))
+        counts = counts.clamp(min=1.0)
+        crystal_fea = crystal_fea / counts.unsqueeze(1)
+        
+        return crystal_fea
+
 
 def masked_mse_loss(preds, targets, masks):
     """
@@ -530,13 +576,41 @@ def main(args):
     )
     
     # Training loop
+    start_epoch = 1
     best_val_loss = float('inf')
     best_metrics = None
     patience_counter = 0
+
+    # Resume from checkpoint if provided
+    if args.resume:
+        if os.path.isfile(args.resume):
+            logger.info(f"Loading checkpoint from '{args.resume}'")
+            checkpoint = torch.load(args.resume)
+            
+            # Load model and optimizer
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            
+            # Restore training state
+            start_epoch = checkpoint['epoch'] + 1
+            best_metrics = checkpoint['val_metrics']
+            
+            # Calculate best validation loss from stored metrics
+            best_val_loss = np.mean([
+                m["MAE"] for m in best_metrics.values() if m["Count"] > 0
+            ])
+            
+            # Restore scheduler state if available (for future compatibility)
+            if 'scheduler_state_dict' in checkpoint:
+                 scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            
+            logger.info(f"Resumed from epoch {checkpoint['epoch']} with Best Val Loss: {best_val_loss:.4f}")
+        else:
+            logger.warning(f"Checkpoint file '{args.resume}' not found. Starting from scratch.")
     
     logger.info("Starting Masked Training...")
     
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(start_epoch, args.epochs + 1):
         # Train
         train_loss = train_epoch(
             model, train_loader, optimizer,
@@ -628,25 +702,29 @@ if __name__ == "__main__":
                         default="D:/coding_files/Projects/matterGen/material dataset/val.parquet")
     parser.add_argument("--output_dir", type=str, default="../../models")
     
-    # Data limits (for faster debugging)
-    parser.add_argument("--max_train_samples", type=int, default=50000,
+    # Data limits (None = Full Dataset)
+    parser.add_argument("--max_train_samples", type=int, default=None,
                         help="Max training samples (None for all)")
-    parser.add_argument("--max_val_samples", type=int, default=10000,
+    parser.add_argument("--max_val_samples", type=int, default=20000,
                         help="Max validation samples")
     
-    # Model architecture
-    parser.add_argument("--hidden_dim", type=int, default=128)
-    parser.add_argument("--n_layers", type=int, default=5)
+    # Model architecture (Scaled Up)
+    parser.add_argument("--hidden_dim", type=int, default=256)
+    parser.add_argument("--n_layers", type=int, default=7)
     parser.add_argument("--dropout", type=float, default=0.1)
     
     # Training hyperparameters  
-    parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--epochs", type=int, default=150)
+    parser.add_argument("--batch_size", type=int, default=128) # Increased batch size for speed
+    parser.add_argument("--lr", type=float, default=5e-4) # Slightly lower LR for larger model
     parser.add_argument("--weight_decay", type=float, default=1e-5)
     parser.add_argument("--grad_clip", type=float, default=1.0)
-    parser.add_argument("--patience", type=int, default=15)
+    parser.add_argument("--patience", type=int, default=20)
     
+    # Resume training
+    parser.add_argument("--resume", type=str, default=None,
+                        help="Path to checkpoint to resume from")
+
     args = parser.parse_args()
     
     # Resolve output path
