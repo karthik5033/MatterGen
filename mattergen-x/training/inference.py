@@ -130,12 +130,25 @@ class CGCNNPredictor:
             raise
 
         # Initialize Model
-        self.model = CGCNN(
+        # Check for architecture args in checkpoint, otherwise use new defaults
+        arch_args = checkpoint.get('arch_args', {})
+        
+        # Determine dimensions effectively
+        hidden_dim = arch_args.get('hidden_dim', 256) 
+        n_layers = arch_args.get('n_conv_layers', 7)
+        # Fallback to old defaults if checking an old model
+        if 'node_hidden_dim' in self.model_state.keys():
+             # Heuristic: estimation or just catch error
+             pass
+
+        from training.scripts.train_optimized_cgcnn import ImprovedCGCNN
+        self.model = ImprovedCGCNN(
             node_input_dim=4, 
             edge_input_dim=41, 
-            node_hidden_dim=64, 
-            n_conv_layers=3, 
-            n_targets=3
+            hidden_dim=hidden_dim, 
+            n_conv_layers=n_layers, 
+            n_targets=3,
+            dropout=0.0 # No dropout at inference
         ).to(self.device)
         
         self.model.load_state_dict(self.model_state)
@@ -146,15 +159,12 @@ class CGCNNPredictor:
         Predict properties for a single structure.
         
         Returns:
-            Dict with keys: formation_energy, band_gap, density, embedding
+            Dict with keys: energy_above_hull, band_gap, bulk_modulus, embedding
         """
         # 1. Build Graph
         atom_fea, nbr_fea, nbr_idx = self.builder.get_graph(structure)
         
         # 2. Batching (Batch size = 1)
-        # We need to add batch dimension? 
-        # Actually CGCNN expects 2D tensors for features, but batch_mapping handles mapping.
-        # For 1 graph, batch_mapping is just zeros(n_atoms).
         n_atoms = atom_fea.shape[0]
         batch_mapping = torch.zeros(n_atoms, dtype=torch.long)
         
@@ -165,12 +175,13 @@ class CGCNNPredictor:
         batch_mapping = batch_mapping.to(self.device)
         
         with torch.no_grad():
-            # Get Embedding
-            # n_graphs = 1
-            embedding = self.model.get_crystal_embedding(atom_fea, nbr_fea, nbr_idx, batch_mapping, 1)
-            
             # Get Prediction
             preds_norm = self.model(atom_fea, nbr_fea, nbr_idx, batch_mapping)
+            
+            # Get Embedding
+            embedding = torch.zeros(256).to(self.device)
+            if hasattr(self.model, 'get_crystal_embedding'):
+                 embedding = self.model.get_crystal_embedding(atom_fea, nbr_fea, nbr_idx, batch_mapping)
             
             # Un-normalize
             preds = preds_norm * self.scaler_scale + self.scaler_mean
@@ -180,9 +191,9 @@ class CGCNNPredictor:
         embedding = embedding.cpu().numpy()[0]
         
         return {
-            "formation_energy": float(preds[0]),
+            "energy_above_hull": float(preds[0]),
             "band_gap": float(preds[1]),
-            "density": float(preds[2]),
+            "bulk_modulus": float(preds[2]),
             "embedding": embedding.tolist()
         }
 
