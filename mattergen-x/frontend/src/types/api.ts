@@ -3,6 +3,7 @@ export interface MaterialCandidate {
   formula: string;
   predicted_properties: Record<string, number | boolean>;
   crystal_structure_cif?: string;
+  score?: number;
 }
 
 export interface GenerateRequest {
