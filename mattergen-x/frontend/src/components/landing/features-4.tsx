@@ -5,36 +5,44 @@ import { Cpu, Fingerprint, Pencil, Settings2, Sparkles, Zap } from 'lucide-react
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
+import Link from 'next/link'
+
 const features = [
     {
         icon: <Zap className="size-5" />,
         title: "Inverse Design",
-        description: "Generate structures directly from validation metrics like stability and band gap."
+        description: "Generate structures directly from validation metrics like stability and band gap.",
+        href: "/features/inverse-design"
     },
     {
         icon: <Cpu className="size-5" />,
         title: "High Throughput",
-        description: "Screen thousands of candidates in seconds with our optimized inference engine."
+        description: "Screen thousands of candidates in seconds with our optimized inference engine.",
+        href: "/features/high-throughput"
     },
     {
         icon: <Fingerprint className="size-5" />,
         title: "Structure Identity",
-        description: "Unique fingerprinting ensures novel candidates are distinct from training data."
+        description: "Unique fingerprinting ensures novel candidates are distinct from training data.",
+        href: "/features/structure-identity"
     },
     {
         icon: <Pencil className="size-5" />,
         title: "Property Tuning",
-        description: "Fine-tune density, formation energy, and electronic properties with precision."
+        description: "Fine-tune density, formation energy, and electronic properties with precision.",
+        href: "/features/property-tuning"
     },
     {
         icon: <Settings2 className="size-5" />,
         title: "Full Control",
-        description: "Adjust weights and constraints to steer the generative model towards your goals."
+        description: "Adjust weights and constraints to steer the generative model towards your goals.",
+        href: "/features/full-control"
     },
     {
         icon: <Sparkles className="size-5" />,
         title: "AI Native",
-        description: "Built on state-of-the-art architectures (CDVAE/DiffCSP) for reliable generation."
+        description: "Built on state-of-the-art architectures (CDVAE/DiffCSP) for reliable generation.",
+        href: "/features/ai-native"
     }
 ]
 
@@ -96,7 +104,6 @@ const SpotlightCard = ({ children, className = "" }: { children: React.ReactNode
         </motion.div>
     );
 };
-
 export default function Features() {
     return (
         <section className="py-12 md:py-24 relative overflow-hidden">
@@ -105,7 +112,7 @@ export default function Features() {
             <div className="absolute bottom-0 left-0 -ml-20 -mb-20 size-[500px] rounded-full bg-emerald-50/50 blur-[100px] -z-10" />
 
             <div className="mx-auto max-w-6xl px-6">
-                <div className="relative z-10 mx-auto max-w-2xl space-y-6 text-center mb-16">
+                <div className="relative z-10 mx-auto max-w-2xl space-y-6 text-center mb-12">
                     <motion.h2 
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -126,7 +133,7 @@ export default function Features() {
                     </motion.p>
                 </div>
 
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {features.map((feature, i) => (
                         <motion.div
                             key={i}
@@ -135,17 +142,28 @@ export default function Features() {
                             viewport={{ once: true }}
                             transition={{ duration: 0.5, delay: i * 0.1 }}
                         >
-                            <SpotlightCard className="p-8 h-full"> 
-                                <div className="mb-4 inline-flex items-center justify-center size-10 rounded-lg bg-gray-50 text-gray-900 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
-                                    {feature.icon}
-                                </div>
-                                <h3 className="mb-2 text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                                    {feature.title}
-                                </h3>
-                                <p className="text-sm text-gray-500 leading-relaxed group-hover:text-gray-600">
-                                    {feature.description}
-                                </p>
-                            </SpotlightCard>
+                            <Link href={feature.href} className="block h-full">
+                                <SpotlightCard className="p-6 h-full flex flex-col items-start justify-between border-gray-200/60 bg-white/80 hover:bg-white/95"> 
+                                    <div>
+                                        <div className="mb-4 inline-flex items-center justify-center size-10 rounded-lg bg-stone-100 text-stone-700 group-hover:bg-stone-700 group-hover:text-white transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm border border-stone-200">
+                                            {feature.icon}
+                                        </div>
+                                        <h3 className="mb-2 text-lg font-semibold text-gray-900 group-hover:text-stone-800 transition-colors">
+                                            {feature.title}
+                                        </h3>
+                                        <p className="text-sm text-gray-500 leading-relaxed group-hover:text-gray-600">
+                                            {feature.description}
+                                        </p>
+                                    </div>
+                                    
+                                    <div className="mt-6 flex items-center text-sm font-medium text-stone-600 opacity-60 group-hover:opacity-100 transition-opacity">
+                                        Learn more
+                                        <svg className="ml-1 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
+                                </SpotlightCard>
+                            </Link>
                         </motion.div>
                     ))}
                 </div>
