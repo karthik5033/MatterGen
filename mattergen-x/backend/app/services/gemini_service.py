@@ -83,7 +83,7 @@ class GeminiService:
                     for model_name in ['gemini-1.5-flash', 'gemini-pro']:
                         try:
                             model = genai.GenerativeModel(model_name)
-                            response = model.generate_content(prompt)
+                            response = await model.generate_content_async(prompt)
                             
                             # Clean/Parse
                             import json
@@ -237,7 +237,7 @@ class GeminiService:
             try:
                 genai.configure(api_key=key)
                 model = genai.GenerativeModel('gemini-1.5-flash')
-                response = model.generate_content(prompt)
+                response = await model.generate_content_async(prompt)
                 
                 import json
                 import re
